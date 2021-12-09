@@ -197,7 +197,7 @@ if __name__ == '__main__':
     random_seed(config["RANDOM_SEED"], True)
     wandb_logger = WandbLogger(
         project="Diffrentiable Spatial Planning Transformer")
-    model = WandbLogger(config)
+    model = WrappedModel(config)
     trainer = pl.Trainer(
         max_epochs=config["epochs"],
         gpus=1,
