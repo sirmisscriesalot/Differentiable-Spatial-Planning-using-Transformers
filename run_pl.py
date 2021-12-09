@@ -43,6 +43,8 @@ config = {
     "val_input_dest_path": './data/val_navdata_input_30.npy',
 
     "batch_size": 20,
+    "epochs": 40,
+    "learning_rate": 1,
 
     "train_dataset_size": 33000,
     "test_dataset_size": None,
@@ -87,10 +89,14 @@ class Dataset():
         return DataLoader(data, sampler=sampler, batch_size=self.batch_size)
 
 # complete this  and move it to utils
-##  use this https://torchmetrics.readthedocs.io/en/stable/pages/implement.html 
+# use this https://torchmetrics.readthedocs.io/en/stable/pages/implement.html
+
+
 def custom_accuracy(preds, labels):
-    pass 
-class MLP(pl.LightningModule):
+    return 1
+
+
+class WrappedModel(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -120,38 +126,67 @@ class MLP(pl.LightningModule):
                                             dest_path=config["val_output_dest_path"],
                                             unzip=False)
         print("Setup Done")
-    
+
     def train_dataloader(self):
-        train_dataset = Dataset(x_file=self.config['train_input_dest_path'],y_file=self.config['train_output_dest_path'],dataset_size=self.config['train_dataset_size'],batch_size=self.config['batch_size'],train=True)
+        train_dataset = Dataset(x_file=self.config['train_input_dest_path'], y_file=self.config['train_output_dest_path'],
+                                dataset_size=self.config['train_dataset_size'], batch_size=self.config['batch_size'], train=True)
         print("Train DataLoader Done")
         return train_dataset.DataLoader
 
     def val_dataloader(self):
-        val_dataset = Dataset(x_file=self.config['val_input_dest_path'],y_file=self.config['val_output_dest_path'],dataset_size=self.config['val_dataset_size'],batch_size=self.config['batch_size'],train=True)
+        val_dataset = Dataset(x_file=self.config['val_input_dest_path'], y_file=self.config['val_output_dest_path'],
+                              dataset_size=self.config['val_dataset_size'], batch_size=self.config['batch_size'], train=True)
         print("Validation DataLoader Done")
         return val_dataset.DataLoader
-    
+
     def test_dataloader(self):
-        test_dataset = Dataset(x_file=self.config['test_input_dest_path'],y_file=self.config['test_output_dest_path'],dataset_size=self.config['test_dataset_size'],batch_size=self.config['batch_size'],train=False)
+        test_dataset = Dataset(x_file=self.config['test_input_dest_path'], y_file=self.config['test_output_dest_path'],
+                               dataset_size=self.config['test_dataset_size'], batch_size=self.config['batch_size'], train=False)
         print("Test DataLoader Done")
         return test_dataset.DataLoader
 
     def forward(self, x):
         return self.model(x)
-    
+
     def on_train_start(self):
         self.logger.log_hyperparams(self.config)
-    
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.config["lr"])
+        scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+        return optimizer
+
+    def optimizer_step(self, *args, **kwargs):
+        super().optimizer_step(*args, **kwargs)
+        self.lr_scheduler.step()  # Step per iteration
+
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
-        y=y.long()
         loss = self.criterion(y_hat, y)
-        y_pred= torch.argmax(y_hat, 1)
-        acc = custom_accuracy(y_pred, y)
-        self.log("train_loss",loss,on_step=False, on_epoch=True)
-        self.log("train_acc",acc,on_step=False,on_epoch=True)
+        acc = custom_accuracy(y_hat, y)
+        self.log("train_loss", loss, on_step=False, on_epoch=True)
+        self.log("train_acc", acc, on_step=False, on_epoch=True)
         return loss
+
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        acc = custom_accuracy(y_hat, y)
+        self.log("val_loss", loss, on_step=False, on_epoch=True)
+        self.log("val_acc", acc, on_step=False, on_epoch=True)
+        return loss
+
+    def test_step(self, batch, batch_idx):
+        x, y = batch
+        y_hat = self(x)
+        loss = self.criterion(y_hat, y)
+        acc = custom_accuracy(y_hat, y)
+        self.log("test_loss", loss, on_step=False, on_epoch=True)
+        self.log("test_acc", acc, on_step=False, on_epoch=True)
+        return loss
+
 
 if __name__ == '__main__':
     plt.rcParams['figure.figsize'] = [15, 8]
@@ -160,3 +195,14 @@ if __name__ == '__main__':
         "cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     print("Device:", device)
     random_seed(config["RANDOM_SEED"], True)
+    wandb_logger = WandbLogger(
+        project="Diffrentiable Spatial Planning Transformer")
+    model = WandbLogger(config)
+    trainer = pl.Trainer(
+        max_epochs=config["epochs"],
+        gpus=1,
+        logger=wandb_logger
+    )
+    trainer.fit(model)
+    trainer.test(model)
+    wandb.finish()
