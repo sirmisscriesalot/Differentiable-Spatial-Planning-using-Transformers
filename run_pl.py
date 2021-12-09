@@ -21,8 +21,8 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
 
-from model.pos_encod import PositionalEncoding
-from model.DSPT import DSPT
+# from model.pos_encod import PositionalEncoding
+# from model.DSPT import DSPT
 
 device = torch.device("cpu")
 config = {
@@ -32,14 +32,14 @@ config = {
     "train_input_file_id": '1lORbh70-sTXvY48ARifexxLsYepDcHSx',
     "train_input_dest_path": './data/train_navdata_input_30.npy',
 
-    "test_output_file_id": "",
+    "test_output_file_id": "1xq51a8cKLQvu4CYUmuuMoAxX7OBJackO",
     "test_output_dest_path": './data/test_navdata_output_30.npy',
-    "test_input_file_id": "",
+    "test_input_file_id": "1Du8uQYHUZ34cF7IqQso6l-et_7LBm1TY",
     "test_input_dest_path": './data/test_navdata_input_30.npy',
 
-    "val_output_file_id": "",
+    "val_output_file_id": "1GEBSvmh9P3NbaY_DmHMEnUNlgPovqJaJ",
     "val_output_dest_path": './data/val_navdata_output_30.npy',
-    "val_input_file_id": "",
+    "val_input_file_id": "1UwEjF4asdcFwLJpijztFHAVq_dkWlie8",
     "val_input_dest_path": './data/val_navdata_input_30.npy',
 
     "batch_size": 20,
@@ -47,8 +47,8 @@ config = {
     "learning_rate": 1,
 
     "train_dataset_size": 33000,
-    "test_dataset_size": None,
-    "val_dataset_size": None,
+    "test_dataset_size": 5000,
+    "val_dataset_size": 5000,
 }
 
 
@@ -61,8 +61,8 @@ def random_seed(seed_value, use_cuda):
 
 class Dataset():
     def __init__(self, x_file, y_file, dataset_size, train=False, batch_size=20):
-        self.xfile = x_file
-        self.yfile = y_file
+        self.x_file = x_file
+        self.y_file = y_file
         self.dataset_size = dataset_size
         self.batch_size = batch_size
         self.train = train
@@ -90,6 +90,71 @@ class Dataset():
 
 # complete this  and move it to utils
 # use this https://torchmetrics.readthedocs.io/en/stable/pages/implement.html
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model=900, max_len=64):
+        """
+        Args
+            d_model: Hidden dimensionality of the input.
+            max_len: Maximum length of a sequence to expect.
+        """
+        super().__init__()
+
+        # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
+        pe = torch.zeros(max_len,d_model)
+        position = torch.arange(0, d_model, dtype=torch.float).unsqueeze(1)
+        print(position.shape)
+        div_term = torch.exp(torch.arange(
+            0, max_len, 2).float() * (-math.log(900) / max_len))
+        print(div_term.shape)
+        
+        pe[0::2,:] = torch.transpose(torch.sin(position * div_term),0,1)
+        pe[1::2,:] = torch.transpose(torch.cos(position * div_term),0,1)
+
+        
+        pe = pe.unsqueeze(0)
+
+        # register_buffer => Tensor which is not a parameter, but should be part of the modules state.
+        # Used for tensors that need to be on the same device as the module.
+        # persistent=False tells PyTorch to not add the buffer to the state dict (e.g. when we save the model)
+        self.register_buffer("pe", pe, persistent=False)
+
+    def forward(self, x):
+        x = x + self.pe[:, : x.size(1)]
+        return x
+
+
+class DSPT(nn.Module):
+    def __init__(self):
+        # add args dict
+        super().__init__()
+        self.p1 = nn.Sequential(
+            nn.Conv2d(in_channels=2, out_channels=32, kernel_size=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=1),
+            nn.ReLU(),
+            nn.Flatten(start_dim=2),
+        )
+
+        # # Encoder
+        self.pe = PositionalEncoding(d_model=900, max_len=64)
+        self.encoder = nn.ModuleList()
+        self.num_trans_layers = 5
+        for _ in range(self.num_trans_layers):
+            self.encoder.append(nn.TransformerEncoderLayer(d_model=900, nhead=9, dim_feedforward=512, dropout=0,
+                                layer_norm_eps=1e-05, batch_first=False, norm_first=False, device=None, dtype=None))
+
+        # Decoder
+        self.decoder = nn.Conv1d(in_channels=64, out_channels=1, kernel_size=1)
+
+    def forward(self, x):
+        x = self.p1(x)
+        x = self.pe(x)
+        
+        for i in range(self.num_trans_layers):
+            x = self.encoder[i](x)
+        x = self.decoder(x)
+        return x
 
 
 def custom_accuracy(preds, labels):
@@ -152,8 +217,8 @@ class WrappedModel(pl.LightningModule):
         self.logger.log_hyperparams(self.config)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), lr=self.config["lr"])
-        scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.config["learning_rate"])
+        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
         return optimizer
 
     def optimizer_step(self, *args, **kwargs):
@@ -163,6 +228,7 @@ class WrappedModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
+        y_hat=torch.reshape(y_hat, (-1, 30, 30))
         loss = self.criterion(y_hat, y)
         acc = custom_accuracy(y_hat, y)
         self.log("train_loss", loss, on_step=False, on_epoch=True)
@@ -172,6 +238,7 @@ class WrappedModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
+        y_hat=torch.reshape(y_hat, (-1, 30, 30))
         loss = self.criterion(y_hat, y)
         acc = custom_accuracy(y_hat, y)
         self.log("val_loss", loss, on_step=False, on_epoch=True)
@@ -181,6 +248,7 @@ class WrappedModel(pl.LightningModule):
     def test_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
+        y_hat=torch.reshape(y_hat, (-1, 30, 30))
         loss = self.criterion(y_hat, y)
         acc = custom_accuracy(y_hat, y)
         self.log("test_loss", loss, on_step=False, on_epoch=True)
