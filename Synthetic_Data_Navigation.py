@@ -5,9 +5,19 @@ from shapely.geometry import Polygon,Point
 from shapely import affinity
 import heapq
 import math
+import argparse
+from tqdm import tqdm
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--size",help = "size of the dataset",type=int)
+parser.add_argument("--M",help= "size of the map",type=int)
+parser.add_argument("--type",help="name the type of set you're generating")
+args = parser.parse_args()
+
+name = args.type
 
 # M = 15
-M = 30
+M = args.M
 
 def createMapGoal():
   O = randint(0,5)
@@ -145,15 +155,15 @@ def createOutputVisualization(nodes):
   plt.subplot(133)
   plt.imshow(y,cmap='viridis')
 
-m,g,goalcoord = createMapGoal()
-x = np.stack((m,g)) #creating the input 
-createMapGoalVisualization(m,g)
+# m,g,goalcoord = createMapGoal()
+# x = np.stack((m,g)) #creating the input 
+# createMapGoalVisualization(m,g)
 
-n = Dijkstra(m,goalcoord)
-y = getOutput(n)
-createOutputVisualization(n)
+# n = Dijkstra(m,goalcoord)
+# y = getOutput(n)
+# createOutputVisualization(n)
 
-plt.show()
+# plt.show()
 
 def createData():
   m,g,goalcoord = createMapGoal()
@@ -164,12 +174,14 @@ def createData():
 
   return x,y
 
-# with open('navdata_input_30.npy','wb') as f1, open ('navdata_output_30.npy','wb') as f2:
-#   for i in range(33000):
-#     print(i)
-#     input,output = createData()
-#     np.save(f1,input)
-#     np.save(f2,output)
+
+input_file_name = "navdata_input_" + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
+output_file_name = "navdata_output_" + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
+with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
+  for i in tqdm(range(args.size),desc="creating dataset..." ):
+    input,output = createData()
+    np.save(f1,input)
+    np.save(f2,output)
 
 # with open('nav_data_input.npy','rb') as f1, open ('nav_data_output.npy','rb') as f2:
 #   for i in range(10):
@@ -178,7 +190,7 @@ def createData():
 #     createMapGoalVisualization(a[0],a[1])
     
 #     for i in range(M):
-#       for j in range(M):
+#       for j in range(M)
 #         if b[i,j] == -1:
 #           b[i,j] = math.inf
 
@@ -188,4 +200,6 @@ def createData():
 #     plt.show()
 
 #it seems to be working 
+
+#should probably also add visualization tools separately ?? 
     
