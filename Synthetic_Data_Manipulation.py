@@ -5,10 +5,20 @@ from shapely.geometry import Polygon,Point,LineString
 from shapely import affinity
 import heapq
 import math
+import argparse
+from tqdm import tqdm 
 
-P = 200
+parser = argparse.ArgumentParser()
+parser.add_argument("--size",help = "size of the dataset",type=int)
+parser.add_argument("--P",help="ground truth resolution",type=int)
+parser.add_argument("--M",help= "size of the map",type=int)
+parser.add_argument("--type",help="name the type of set you're generating")
+args = parser.parse_args()
+
+P = args.P
 # M = 18
-M = 36
+M = args.M
+name = args.type
 
 def getDist(point1,point2):
   dist = math.sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2)
@@ -201,13 +211,40 @@ def createOutputVisualization(nodes):
   plt.subplot(144)
   plt.imshow(y,cmap='viridis')
 
-vi,obs1 = createOperationalSpace()
-m,g,goalcoord = createMapGoal(obs1)
-x = np.stack((m,g)) #creating the input 
-createMapGoalVisualization(m,g,vi)
+def createData():
+  vi,obs1 = createOperationalSpace()
+  m,g,goalcoord = createMapGoal(obs1)
+  x = np.stack((m,g))
+  n = Dijkstra(m,goalcoord)
+  y = getOutput(n)
 
-n = Dijkstra(m,goalcoord)
-y = getOutput(n)
-createOutputVisualization(n)
+  vis = (m,g,vi,n)
 
-plt.show()
+  return x,y,vis
+
+def createVisualization(vis):
+  createMapGoalVisualization(vis[0],vis[1],vis[2])
+  createOutputVisualization(vis[3])
+
+# vi,obs1 = createOperationalSpace()
+# m,g,goalcoord = createMapGoal(obs1)
+# x = np.stack((m,g)) #creating the input 
+# createMapGoalVisualization(m,g,vi)
+
+# n = Dijkstra(m,goalcoord)
+# y = getOutput(n)
+# createOutputVisualization(n)
+
+# X,Y,VIS = createData()
+# createVisualization(VIS)
+
+# plt.show()
+
+input_file_name = "manipulationdata_input_" + str(args.P) + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
+output_file_name = "manipulationdata_output_" + str(args.P) + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
+
+with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
+  for i in tqdm(range(args.size),desc="creating dataset..." ):
+    input,output,_ = createData()
+    np.save(f1,input)
+    np.save(f2,output)
