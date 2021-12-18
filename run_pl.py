@@ -229,9 +229,16 @@ class WrappedModel(pl.LightningModule):
         acc = custom_accuracy(y_hat, y)
         self.log("val_loss", loss, on_step=False, on_epoch=True)
         self.log("val_acc", acc, on_step=False, on_epoch=True)
-       
-        y_hat = y_hat.to('cpu').detach().numpy()
-        self.log("test_output",y_hat,on_step=False, on_epoch=True)
+        
+        
+        x,y = val_dataset[10]
+        x = torch.reshape(x,(1,2,30,30))
+        output = model(x.to(device))
+        output = torch.reshape(output,(30,30))
+        output = output.to('cpu').detach().numpy()
+        y = y.to('cpu').detach().numpy()
+        self.log("test_output",output,on_step=False, on_epoch=True)
+        self.log("test_truth",y,on_step=False, on_epoch=True)
         
         return loss
 
