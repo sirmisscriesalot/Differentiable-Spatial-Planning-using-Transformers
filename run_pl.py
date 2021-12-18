@@ -8,6 +8,7 @@ from tqdm import tqdm
 import argparse
 import copy
 import sklearn
+!pip install wandb -qqq
 import wandb
 
 import torch
