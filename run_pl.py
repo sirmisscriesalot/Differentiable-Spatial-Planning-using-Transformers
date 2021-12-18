@@ -92,7 +92,7 @@ class Dataset():
 # use this https://torchmetrics.readthedocs.io/en/stable/pages/implement.html
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model=900, max_len=64):
+    def __init__(self, d_model=64, max_len=900):
         """
         Args
             d_model: Hidden dimensionality of the input.
@@ -137,11 +137,11 @@ class DSPT(nn.Module):
         )
 
         # # Encoder
-        self.pe = PositionalEncoding(d_model=900, max_len=64)
+        self.pe = PositionalEncoding(d_model=64, max_len=900)
         self.encoder = nn.ModuleList()
         self.num_trans_layers = 5
         for _ in range(self.num_trans_layers):
-            self.encoder.append(nn.TransformerEncoderLayer(d_model=900, nhead=9, dim_feedforward=512, dropout=0,
+            self.encoder.append(nn.TransformerEncoderLayer(d_model=64, nhead=8, dim_feedforward=512, dropout=0,
                                 layer_norm_eps=1e-05, batch_first=False, norm_first=False, device=None, dtype=None))
 
         # Decoder
@@ -150,9 +150,10 @@ class DSPT(nn.Module):
     def forward(self, x):
         x = self.p1(x)
         x = self.pe(x)
-        
+        x = x.permute(0,2,1)
         for i in range(self.num_trans_layers):
             x = self.encoder[i](x)
+        x = x.permute(0,2,1)
         x = self.decoder(x)
         return x
 
