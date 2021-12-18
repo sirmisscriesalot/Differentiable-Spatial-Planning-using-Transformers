@@ -125,7 +125,7 @@ class DSPT(nn.Module):
         self.encoder = nn.ModuleList()
         self.num_trans_layers = 5
         for _ in range(self.num_trans_layers):
-            self.encoder.append(nn.TransformerEncoderLayer(d_model=64, nhead=8, dim_feedforward=512, dropout=0,
+            self.encoder.append(nn.TransformerEncoderLayer(d_model=64, nhead=8, dim_feedforward=512, dropout=0.1,
                                 layer_norm_eps=1e-05, batch_first=False, norm_first=False, device=None, dtype=None))
 
         # Decoder
@@ -203,7 +203,7 @@ class WrappedModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.config["learning_rate"])
-        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
         return optimizer
 
     def optimizer_step(self, *args, **kwargs):
@@ -228,6 +228,10 @@ class WrappedModel(pl.LightningModule):
         acc = custom_accuracy(y_hat, y)
         self.log("val_loss", loss, on_step=False, on_epoch=True)
         self.log("val_acc", acc, on_step=False, on_epoch=True)
+       
+        y_hat = y_hat.to('cpu').detach().numpy()
+        self.log("test_output",y_hat,on_step=False, on_epoch=True)
+        
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -254,7 +258,8 @@ if __name__ == '__main__':
     trainer = pl.Trainer(
         max_epochs=config["epochs"],
         gpus=1,
-        logger=wandb_logger
+        logger=wandb_logger,
+        gradient_clip_val=1.0
     )
     trainer.fit(model)
     trainer.test(model)
