@@ -230,10 +230,10 @@ class WrappedModel(pl.LightningModule):
         self.log("val_loss", loss, on_step=False, on_epoch=True)
         self.log("val_acc", acc, on_step=False, on_epoch=True)
         
-        y_hat = y_hat.to('cpu').detach().numpy()
-        y = y.to('cpu').detach().numpy()
-        self.log("test_output",y_hat[0],on_step=False, on_epoch=True)
-        self.log("test_truth",y[0],on_step=False, on_epoch=True)
+#         y_hat = y_hat.to('cpu').detach().numpy()
+#         y = y.to('cpu').detach().numpy()
+#         self.log("test_output",y_hat[0],on_step=False, on_epoch=True)
+#         self.log("test_truth",y[0],on_step=False, on_epoch=True)
         
         return loss
 
