@@ -133,8 +133,8 @@ class DSPT(nn.Module):
 
     def forward(self, x):
         x = self.p1(x)
-        x = x.permute(0,2,1)
         x = self.pe(x)
+        x - x.permute(0,2,1)
         for i in range(self.num_trans_layers):
             x = self.encoder[i](x)
         x = x.permute(0,2,1)
