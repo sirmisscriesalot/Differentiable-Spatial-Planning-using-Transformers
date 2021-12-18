@@ -92,36 +92,20 @@ class Dataset():
 # use this https://torchmetrics.readthedocs.io/en/stable/pages/implement.html
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model=64, max_len=900):
-        """
-        Args
-            d_model: Hidden dimensionality of the input.
-            max_len: Maximum length of a sequence to expect.
-        """
-        super().__init__()
+  #max len is most likely C = M^2
+  def __init__(self,d_model=64,max_len=900):
+    super().__init__()
+    pe = torch.zeros(d_model,max_len)
+    position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(0)
+    div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(max_len) / d_model)).unsqueeze(1)
+    pe[0::2,:] = torch.sin(torch.matmul(div_term,position))
+    pe[1::2,:] = torch.cos(torch.matmul(div_term,position))
 
-        # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
-        pe = torch.zeros(max_len,d_model)
-        position = torch.arange(0, d_model, dtype=torch.float).unsqueeze(1)
-        print(position.shape)
-        div_term = torch.exp(torch.arange(
-            0, max_len, 2).float() * (-math.log(900) / max_len))
-        print(div_term.shape)
-        
-        pe[0::2,:] = torch.transpose(torch.sin(position * div_term),0,1)
-        pe[1::2,:] = torch.transpose(torch.cos(position * div_term),0,1)
-
-        
-        pe = pe.unsqueeze(0)
-
-        # register_buffer => Tensor which is not a parameter, but should be part of the modules state.
-        # Used for tensors that need to be on the same device as the module.
-        # persistent=False tells PyTorch to not add the buffer to the state dict (e.g. when we save the model)
-        self.register_buffer("pe", pe, persistent=False)
-
-    def forward(self, x):
-        x = x + self.pe[:, : x.size(1)]
-        return x
+    self.pe = pe
+  
+  def forward(self,x):
+    x = x + self.pe
+    return x
 
 
 class DSPT(nn.Module):
