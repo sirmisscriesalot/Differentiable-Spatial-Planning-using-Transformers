@@ -78,6 +78,8 @@ class Dataset():
             for _ in tqdm(range(self.dataset_size)):
                 self.x_list.append(np.load(fx))
                 self.y_list.append(np.load(fy))
+        self.x_list=np.array(self.x_list)
+        self.y_list=np.array(self.y_list)
         return torch.Tensor(self.x_list), torch.Tensor(self.y_list)
 
     def get_dataloader(self, inputs, labels, train=True):
