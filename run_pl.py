@@ -104,7 +104,7 @@ class PositionalEncoding(nn.Module):
 
     
   def forward(self,x):
-    x = x + self.pe[:, : x.size(1)]
+    x = x + self.pe
     return x
 
 
@@ -185,7 +185,7 @@ class WrappedModel(pl.LightningModule):
 
     def val_dataloader(self):
         val_dataset = Dataset(x_file=self.config['val_input_dest_path'], y_file=self.config['val_output_dest_path'],
-                              dataset_size=self.config['val_dataset_size'], batch_size=self.config['batch_size'], train=True)
+                              dataset_size=self.config['val_dataset_size'], batch_size=self.config['batch_size'], train=False)
         print("Validation DataLoader Done")
         return val_dataset.DataLoader
 
@@ -228,12 +228,6 @@ class WrappedModel(pl.LightningModule):
         acc = custom_accuracy(y_hat, y)
         self.log("val_loss", loss, on_step=False, on_epoch=True)
         self.log("val_acc", acc, on_step=False, on_epoch=True)
-        
-#         y_hat = y_hat.to('cpu').detach().numpy()
-#         y = y.to('cpu').detach().numpy()
-#         self.log("test_output",y_hat[0],on_step=False, on_epoch=True)
-#         self.log("test_truth",y[0],on_step=False, on_epoch=True)
-        
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -245,6 +239,7 @@ class WrappedModel(pl.LightningModule):
         self.log("test_loss", loss, on_step=False, on_epoch=True)
         self.log("test_acc", acc, on_step=False, on_epoch=True)
         return loss
+
 
 
 if __name__ == '__main__':
