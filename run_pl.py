@@ -265,3 +265,4 @@ if __name__ == '__main__':
     trainer.fit(model)
     trainer.test(model)
     wandb.finish()
+    # ignore this 
