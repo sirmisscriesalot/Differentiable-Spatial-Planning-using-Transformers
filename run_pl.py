@@ -92,36 +92,21 @@ class Dataset():
 # use this https://torchmetrics.readthedocs.io/en/stable/pages/implement.html
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model=900, max_len=64):
-        """
-        Args
-            d_model: Hidden dimensionality of the input.
-            max_len: Maximum length of a sequence to expect.
-        """
-        super().__init__()
+  #max len is most likely C = M^2
+  def __init__(self,d_model=64,max_len=900):
+    super().__init__()
+    pe = torch.zeros(d_model,max_len)
+    position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(0)
+    div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(max_len) / d_model)).unsqueeze(1)
+    pe[0::2,:] = torch.sin(torch.matmul(div_term,position))
+    pe[1::2,:] = torch.cos(torch.matmul(div_term,position))
 
-        # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
-        pe = torch.zeros(max_len,d_model)
-        position = torch.arange(0, d_model, dtype=torch.float).unsqueeze(1)
-        print(position.shape)
-        div_term = torch.exp(torch.arange(
-            0, max_len, 2).float() * (-math.log(900) / max_len))
-        print(div_term.shape)
-        
-        pe[0::2,:] = torch.transpose(torch.sin(position * div_term),0,1)
-        pe[1::2,:] = torch.transpose(torch.cos(position * div_term),0,1)
-
-        
-        pe = pe.unsqueeze(0)
-
-        # register_buffer => Tensor which is not a parameter, but should be part of the modules state.
-        # Used for tensors that need to be on the same device as the module.
-        # persistent=False tells PyTorch to not add the buffer to the state dict (e.g. when we save the model)
-        self.register_buffer("pe", pe, persistent=False)
-
-    def forward(self, x):
-        x = x + self.pe[:, : x.size(1)]
-        return x
+    pe = pe.to(device)
+    self.pe = pe
+  
+  def forward(self,x):
+    x = x + self.pe
+    return x
 
 
 class DSPT(nn.Module):
@@ -137,11 +122,11 @@ class DSPT(nn.Module):
         )
 
         # # Encoder
-        self.pe = PositionalEncoding(d_model=900, max_len=64)
+        self.pe = PositionalEncoding(d_model=64, max_len=900)
         self.encoder = nn.ModuleList()
         self.num_trans_layers = 5
         for _ in range(self.num_trans_layers):
-            self.encoder.append(nn.TransformerEncoderLayer(d_model=900, nhead=9, dim_feedforward=512, dropout=0,
+            self.encoder.append(nn.TransformerEncoderLayer(d_model=64, nhead=8, dim_feedforward=512, dropout=0.1,
                                 layer_norm_eps=1e-05, batch_first=False, norm_first=False, device=None, dtype=None))
 
         # Decoder
@@ -150,9 +135,10 @@ class DSPT(nn.Module):
     def forward(self, x):
         x = self.p1(x)
         x = self.pe(x)
-        
+        x = x.permute(0,2,1)
         for i in range(self.num_trans_layers):
             x = self.encoder[i](x)
+        x = x.permute(0,2,1)
         x = self.decoder(x)
         return x
 
@@ -218,7 +204,7 @@ class WrappedModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.config["learning_rate"])
-        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
         return optimizer
 
     def optimizer_step(self, *args, **kwargs):
@@ -243,6 +229,12 @@ class WrappedModel(pl.LightningModule):
         acc = custom_accuracy(y_hat, y)
         self.log("val_loss", loss, on_step=False, on_epoch=True)
         self.log("val_acc", acc, on_step=False, on_epoch=True)
+        
+#         y_hat = y_hat.to('cpu').detach().numpy()
+#         y = y.to('cpu').detach().numpy()
+#         self.log("test_output",y_hat[0],on_step=False, on_epoch=True)
+#         self.log("test_truth",y[0],on_step=False, on_epoch=True)
+        
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -269,7 +261,8 @@ if __name__ == '__main__':
     trainer = pl.Trainer(
         max_epochs=config["epochs"],
         gpus=1,
-        logger=wandb_logger
+        logger=wandb_logger,
+        gradient_clip_val=1.0
     )
     trainer.fit(model)
     trainer.test(model)
