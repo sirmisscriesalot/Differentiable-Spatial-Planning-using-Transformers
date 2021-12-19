@@ -218,8 +218,10 @@ class WrappedModel(pl.LightningModule):
         y_hat=torch.reshape(y_hat, (-1, 30, 30))
         loss = self.criterion(y_hat, y)
         acc = custom_accuracy(y_hat, y)
-        self.log("train_loss", loss, on_step=False, on_epoch=True)
-        self.log("train_acc", acc, on_step=False, on_epoch=True)
+        # self.log("train_loss", loss, on_step=False, on_epoch=True)
+        # self.log("train_acc", acc, on_step=False, on_epoch=True)
+        self.log("train_loss", loss)
+        self.log("train_acc", acc)
         return loss
 
     def validation_step(self, batch, batch_idx):
