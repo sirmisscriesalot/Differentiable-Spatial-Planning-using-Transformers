@@ -12,12 +12,12 @@ catch() {
   fi
 }
 #Don't change the colab versions for these libraries
-PYTHON_VERSION="$( python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))' )"
-#PIL_VERSION="$(python -c 'from PIL import Image; print(Image.__version__)')"
-CFFI_VERSION="$(python -c 'import cffi; print(cffi.__version__)')"
-NUMPY_VERSION="$(python -c 'import numpy as np; print(np.__version__)')"
-SCIPY_VERSION="$(python -c 'import scipy; print(scipy.__version__)')"
-NUMBA_VERSION="$(python -c 'import numba; print(numba.__version__)')"
+PYTHON_VERSION="$( python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))' )"
+PIL_VERSION="$(python3 -c 'import PIL; print(PIL.__version__)')"
+CFFI_VERSION="$(python3 -c 'import cffi; print(cffi.__version__)')"
+NUMPY_VERSION="$(python3 -c 'import numpy as np; print(np.__version__)')"
+SCIPY_VERSION="$(python3 -c 'import scipy; print(scipy.__version__)')"
+NUMBA_VERSION="$(python3 -c 'import numba; print(numba.__version__)')"
 #Install Miniconda
 cd /content/
 wget -c https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh && bash Miniconda3-latest-Linux-x86_64.sh -bfp /usr/local
