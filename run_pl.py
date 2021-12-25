@@ -21,6 +21,8 @@ from torch.utils.data import TensorDataset, RandomSampler, SequentialSampler, ra
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
+from pytorch_lightning.callbacks import LearningRateMonitor
+lr_monitor = LearningRateMonitor(logging_interval='step')
 
 # from model.pos_encod import PositionalEncoding
 # from model.DSPT import DSPT
@@ -221,8 +223,14 @@ class WrappedModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.config["learning_rate"])
-        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
-        return optimizer
+#         self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+        return {
+        "optimizer": optimizer,
+        "lr_scheduler": {
+            "scheduler": StepLR(optimizer, step_size=1, gamma=0.9),
+        },
+    }
+
 
 #     def optimizer_step(self, *args, **kwargs):
 #         super().optimizer_step(*args, **kwargs)
@@ -270,13 +278,14 @@ if __name__ == '__main__':
     print("Device:", device)
     random_seed(config["RANDOM_SEED"], True)
     wandb_logger = WandbLogger(
-        project="Diffrentiable Spatial Planning Transformer")
+        project="Diffrentiable Spatial Planning Transformer", entity="agv_astar_dspt")
     model = WrappedModel(config)
     trainer = pl.Trainer(
         max_epochs=config["epochs"],
         gpus=1,
         logger=wandb_logger,
-        gradient_clip_val=1.0
+        gradient_clip_val=1.0,
+        callbacks=[lr_monitor]
     )
     trainer.fit(model)
     trainer.test(model)
