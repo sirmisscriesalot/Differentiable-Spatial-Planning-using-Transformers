@@ -13,7 +13,7 @@ catch() {
 }
 #Don't change the colab versions for these libraries
 PYTHON_VERSION="$( python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))' )"
-PIL_VERSION="$(python -c 'import PIL; print(PIL.__version__)')"
+PIL_VERSION="$(python -c 'from PIL import Image; print(Image.__version__)')"
 CFFI_VERSION="$(python -c 'import cffi; print(cffi.__version__)')"
 NUMPY_VERSION="$(python -c 'import numpy as np; print(np.__version__)')"
 SCIPY_VERSION="$(python -c 'import scipy; print(scipy.__version__)')"
