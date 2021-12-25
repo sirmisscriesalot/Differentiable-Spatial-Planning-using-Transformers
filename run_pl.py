@@ -2,6 +2,7 @@ from google_drive_downloader import GoogleDriveDownloader as gdd
 import numpy as np
 import random
 import math
+from torch import autograd,Tensor
 import matplotlib.pyplot as plt
 from torch.types import Device
 from tqdm import tqdm
