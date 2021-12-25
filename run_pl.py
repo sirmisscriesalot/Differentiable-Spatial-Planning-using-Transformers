@@ -221,12 +221,12 @@ class WrappedModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.config["learning_rate"])
-        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
+        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
         return optimizer
 
-    def optimizer_step(self, *args, **kwargs):
-        super().optimizer_step(*args, **kwargs)
-        self.lr_scheduler.step()  # Step per iteration
+#     def optimizer_step(self, *args, **kwargs):
+#         super().optimizer_step(*args, **kwargs)
+#         self.lr_scheduler.step()  # Step per iteration
 
     def training_step(self, batch, batch_idx):
         x, y = batch
