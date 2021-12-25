@@ -2,6 +2,7 @@ from google_drive_downloader import GoogleDriveDownloader as gdd
 import numpy as np
 import random
 import math
+from torch import autograd,Tensor
 import matplotlib.pyplot as plt
 from torch.types import Device
 from tqdm import tqdm
@@ -20,6 +21,8 @@ from torch.utils.data import TensorDataset, RandomSampler, SequentialSampler, ra
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning import seed_everything
+from pytorch_lightning.callbacks import LearningRateMonitor
+lr_monitor = LearningRateMonitor(logging_interval='step')
 
 # from model.pos_encod import PositionalEncoding
 # from model.DSPT import DSPT
@@ -94,54 +97,69 @@ class Dataset():
 # use this https://torchmetrics.readthedocs.io/en/stable/pages/implement.html
 
 class PositionalEncoding(nn.Module):
-  #max len is most likely C = M^2
+
   def __init__(self,d_model=64,max_len=900):
     super().__init__()
-    pe = torch.zeros(d_model,max_len)
+  
+  def forward(self,x,d_model=64):
+    max_len = x.size(2)
+    pe = torch.zeros(1,d_model,max_len)
     position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(0)
     div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(max_len) / d_model)).unsqueeze(1)
-    pe[0::2,:] = torch.sin(torch.matmul(div_term,position))
-    pe[1::2,:] = torch.cos(torch.matmul(div_term,position))
-    self.register_buffer('pe',pe, persistent=False)
+    pe[0,0::2,:] = torch.sin(torch.matmul(div_term,position))
+    pe[0,1::2,:] = torch.cos(torch.matmul(div_term,position))
 
-    
-  def forward(self,x):
-    x = x + self.pe
+    self.register_buffer('pe',pe)
+    x = x.to(device) + self.pe[:x.size(0)].to(device)
     return x
 
+class CNNEncoding(nn.Module):
+
+  def __init__(self):
+    super().__init__()
+
+    self.conv1 = nn.Conv2d(in_channels=2, out_channels=64, kernel_size=1)
+    self.conv2 = nn.Conv2d(in_channels = 64,out_channels=64, kernel_size=1)
+    self.flatten = nn.Flatten(start_dim=2)
+
+  def init_weights(self) -> None:
+    nn.init.kaiming_uniform_(self.conv1.weight.data,nonlinearity='relu')
+    nn.init.kaiming_uniform_(self.conv2.weight.data,nonlinearity='relu')
+
+  def forward(self,x) -> Tensor:
+    x = F.relu(self.conv1(x))
+    x = self.conv2(x)
+    x = self.flatten(x)
+    
+    return x
 
 class DSPT(nn.Module):
-    def __init__(self):
-        # add args dict
-        super().__init__()
-        self.p1 = nn.Sequential(
-            nn.Conv2d(in_channels=2, out_channels=32, kernel_size=1),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=1),
-            nn.ReLU(),
-            nn.Flatten(start_dim=2),
-        )
+  def __init__(self,d_model=64,nhead=8,d_hid=512,nlayers=5,dropout=0.1):
+    super().__init__()
+    self.model_type = 'DSPT'
+    self.pos_encoder = PositionalEncoding()
+    self.conv_encoder = CNNEncoding()
+    encoder_layers = nn.TransformerEncoderLayer(d_model,nhead,d_hid,dropout,batch_first=True)
+    self.transformer_encoder = nn.TransformerEncoder(encoder_layers,nlayers)
+    self.d_model = d_model
+    self.decoder = nn.Linear(d_model,1)
 
-        # # Encoder
-        self.pe = PositionalEncoding(d_model=64, max_len=900)
-        self.encoder = nn.ModuleList()
-        self.num_trans_layers = 5
-        for _ in range(self.num_trans_layers):
-            self.encoder.append(nn.TransformerEncoderLayer(d_model=64, nhead=8, dim_feedforward=512, dropout=0.1,
-                                layer_norm_eps=1e-05, batch_first=False, norm_first=False, device=None, dtype=None))
+  def init_weights(self) -> None:
+    # initrange = 0.1
+    # self.encoder.weight.data.uniform_(-initrange, initrange)
+    nn.init.kaiming_uniform_(self.encoder.weight.data,nonlinearity='relu')
+    self.decoder.bias.data.zero_()
+    # self.decoder.weight.data.uniform_(-initrange, initrange)
+    nn.init.kaiming_uniform_(self.decoder.weight.data,nonlinearity='relu')
 
-        # Decoder
-        self.decoder = nn.Conv1d(in_channels=64, out_channels=1, kernel_size=1)
+  def forward(self, src) -> Tensor:
+    src = self.conv_encoder(src)
+    src = self.pos_encoder(src)
+    src = torch.transpose(src,1,2)
+    output = self.transformer_encoder(src)
+    output = self.decoder(output)
 
-    def forward(self, x):
-        x = self.p1(x)
-        x = self.pe(x)
-        x = x.permute(0,2,1)
-        for i in range(self.num_trans_layers):
-            x = self.encoder[i](x)
-        x = x.permute(0,2,1)
-        x = self.decoder(x)
-        return x
+    return output
 
 
 def custom_accuracy(preds, labels):
@@ -205,12 +223,18 @@ class WrappedModel(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.config["learning_rate"])
-        self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.5)
-        return optimizer
+#         self.lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+        return {
+        "optimizer": optimizer,
+        "lr_scheduler": {
+            "scheduler": StepLR(optimizer, step_size=1, gamma=0.9),
+        },
+    }
 
-    def optimizer_step(self, *args, **kwargs):
-        super().optimizer_step(*args, **kwargs)
-        self.lr_scheduler.step()  # Step per iteration
+
+#     def optimizer_step(self, *args, **kwargs):
+#         super().optimizer_step(*args, **kwargs)
+#         self.lr_scheduler.step()  # Step per iteration
 
     def training_step(self, batch, batch_idx):
         x, y = batch
@@ -254,13 +278,14 @@ if __name__ == '__main__':
     print("Device:", device)
     random_seed(config["RANDOM_SEED"], True)
     wandb_logger = WandbLogger(
-        project="Diffrentiable Spatial Planning Transformer")
+        project="Diffrentiable Spatial Planning Transformer", entity="agv_astar_dspt")
     model = WrappedModel(config)
     trainer = pl.Trainer(
         max_epochs=config["epochs"],
         gpus=1,
         logger=wandb_logger,
-        gradient_clip_val=1.0
+        gradient_clip_val=1.0,
+        callbacks=[lr_monitor]
     )
     trainer.fit(model)
     trainer.test(model)
