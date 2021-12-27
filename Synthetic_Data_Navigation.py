@@ -7,19 +7,37 @@ import heapq
 import math
 import argparse
 from tqdm import tqdm
+import time 
+import concurrent.futures
+
+t1 = time.perf_counter()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--size",help = "size of the dataset",type=int)
 parser.add_argument("--M",help= "size of the map",type=int)
-parser.add_argument("--type",help="name the type of set you're generating")
+parser.add_argument("--xfile",help="name the of input x dataset you're generating")
+parser.add_argument("--yfile",help="name the of output y dataset you're generating")
+parser.add_argument("--mode",help="enter c to create dataset and v to visualize the created dataset")
+parser.add_argument("--nthread",help="number of threads you want to use",type=int)
 args = parser.parse_args()
 
-name = args.type
+map_size = args.M
+mode = args.mode
+xfile = args.xfile
+yfile = args.yfile
+nthread = args.nthread
+size = args.size
+iter = range(size)
+
+# per_thread_queue = []
+# for i in range(nthread):
+#   per_thread_queue.append(size//nthread)
+# per_thread_queue[-1] = per_thread_queue[-1] + size%nthread
 
 # M = 15
-M = args.M
+# M = args.M
 
-def createMapGoal():
+def createMapGoal(M):
   O = randint(0,5)
   m = np.zeros((M,M))
   g = np.zeros((M,M))
@@ -80,7 +98,7 @@ class Node():
     def __lt__(self, other):
         return self.g < other.g
 
-def createNodes():
+def createNodes(M):
   node_list = []
   for i in range(M):
     node_list.append([])
@@ -94,7 +112,7 @@ def isBlocked(m,point):
     return True
   return False
 
-def getNeighbor(m,point):
+def getNeighbor(m,point,M):
   x,y = point 
   neighbor = []
   
@@ -114,15 +132,15 @@ def getNeighbor(m,point):
   
   return points
 
-def Dijkstra(m,goal):
+def Dijkstra(m,goal,M):
   Q = []
-  nodes = createNodes()
+  nodes = createNodes(M)
   nodes[goal[0]][goal[1]].g = 0
   heapq.heappush(Q,nodes[goal[0]][goal[1]])
 
   while len(Q)>0:
     current = heapq.heappop(Q)
-    for i in getNeighbor(m,current.position):
+    for i in getNeighbor(m,current.position,M):
       temp = current.g + 1
       if temp < nodes[i[0]][i[1]].g:
         nodes[i[0]][i[1]].g = temp
@@ -133,7 +151,7 @@ def Dijkstra(m,goal):
 
   return nodes
 
-def getOutput(nodes):
+def getOutput(nodes,M):
   y = np.zeros((M,M))
   for i in nodes:
     for j in i:
@@ -146,7 +164,7 @@ def getOutput(nodes):
 
   return y
 
-def createOutputVisualization(nodes):
+def createOutputVisualization(nodes,M):
   y = np.zeros((M,M))
   for i in nodes:
     for j in i:
@@ -165,41 +183,92 @@ def createOutputVisualization(nodes):
 
 # plt.show()
 
-def createData():
-  m,g,goalcoord = createMapGoal()
+def createData(_):
+  M = map_size
+  m,g,goalcoord = createMapGoal(M)
   x = np.stack((m,g)) #creating the input 
 
-  n = Dijkstra(m,goalcoord)
-  y = getOutput(n)
+  n = Dijkstra(m,goalcoord,M)
+  y = getOutput(n,M)
 
-  return x,y
+  return (x,y)
+
+def close_event():
+  plt.close()
+
+# def createDataThread(tempsize):
+#   inout_list = []
+#   for i in range(tempsize):
+#     temp_in,temp_out = createData(map_sizes[i%3])
+#     inout_list.append((temp_in,temp_out))
+
+#   return inout_list
 
 
-input_file_name = "navdata_input_" + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
-output_file_name = "navdata_output_" + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
-with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
-  for i in tqdm(range(args.size),desc="creating dataset..." ):
-    input,output = createData()
-    np.save(f1,input)
-    np.save(f2,output)
+# input_file_name = "navdata_input_" + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
+# output_file_name = "navdata_output_" + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
+# input_file_name = "navdata_input_" + str(args.size) + "_" + name +".npy"
+# output_file_name = "navdata_output_" + str(args.size) + "_" + name +".npy"
 
-# with open('nav_data_input.npy','rb') as f1, open ('nav_data_output.npy','rb') as f2:
-#   for i in range(10):
-#     a = np.load(f1)
-#     b = np.load(f2)
-#     createMapGoalVisualization(a[0],a[1])
-    
-#     for i in range(M):
-#       for j in range(M)
-#         if b[i,j] == -1:
-#           b[i,j] = math.inf
+input_file_name = xfile +".npy"
+output_file_name = yfile +".npy"
 
-#     plt.subplot(133)
-#     plt.imshow(b,cmap='viridis')
+def main():
+  if mode=='c':
+    # with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
+    #   for i in tqdm(range(args.size),desc="creating dataset..." ):
+    #     input,output = createData(map_sizes[i%3])
+    #     np.save(f1,input)
+    #     np.save(f2,output)
+    # with concurrent.futures.ProcessPoolExecutor() as executor:
+    #   results = executor.map(createDataThread,per_thread_queue)
 
-#     plt.show()
+    #   with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
+    #     for result in results:
+    #       for data in result:
+    #         input = data[0]
+    #         output = data[1]
 
-#it seems to be working 
+    #         np.save(f1,input)
+    #         np.save(f2,output)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=nthread) as executor:
+      results = tqdm(executor.map(createData,iter),total=len(iter))
 
-#should probably also add visualization tools separately ?? 
-    
+      with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
+        for result in results:
+          input = result[0]
+          output = result[1]
+
+          np.save(f1,input)
+          np.save(f2,output)         
+
+
+  fig = plt.figure()
+  timer = fig.canvas.new_timer(interval = 5000) #creating a timer object and setting an interval of 5000 milliseconds
+  timer.add_callback(close_event)
+
+  if mode=='v':
+    with open(input_file_name,'rb') as f1, open (output_file_name,'rb') as f2:
+      for i in range(10):
+        a = np.load(f1)
+        b = np.load(f2)
+        createMapGoalVisualization(a[0],a[1])
+        
+        for i in range(len(a[0])):
+          for j in range(len(a[0])):
+            if b[i,j] == -1:
+              b[i,j] = math.inf
+
+        plt.subplot(133)
+        plt.imshow(b,cmap='viridis')
+        timer.start()
+        plt.show()
+
+  #it seems to be working 
+
+  #should probably also add visualization tools separately ?? 
+  t2 = time.perf_counter()
+  print(f'Finished in {t2-t1} seconds')
+
+if __name__ == '__main__':
+  main()
