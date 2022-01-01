@@ -210,8 +210,8 @@ def close_event():
 # input_file_name = "navdata_input_" + str(args.size) + "_" + name +".npy"
 # output_file_name = "navdata_output_" + str(args.size) + "_" + name +".npy"
 
-input_file_name = xfile +".npy"
-output_file_name = yfile +".npy"
+input_file_name = xfile +".npz"
+output_file_name = yfile +".npz"
 
 def main():
   if mode=='c':
@@ -232,26 +232,54 @@ def main():
     #         np.save(f1,input)
     #         np.save(f2,output)
     with concurrent.futures.ProcessPoolExecutor(max_workers=nthread) as executor:
-      results = tqdm(executor.map(createData,iter),total=len(iter))
+      futures = list(tqdm(executor.map(createData,iter),total=len(iter)))
+    #   print(len(results))
+    #   with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
+    #     for result in results:
+    #       input = result[0]
+    #       output = result[1]
 
-      with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
-        for result in results:
-          input = result[0]
-          output = result[1]
+    #       np.save(f1,input)
+    #       np.save(f2,output)       
+    #   futures = [executor.submit(createData,i) for i in iter]
+    #   concurrent.futures.wait(futures,timeout=10000)
+    #   np.savez(input_file_name,*[i.result()[0] for i in futures])
+    #   np.savez(output_file_name,*[i.result()[1] for i in futures])
+      np.savez(input_file_name,*[i[0] for i in futures])
+      np.savez(output_file_name,*[i[1] for i in futures])
 
-          np.save(f1,input)
-          np.save(f2,output)         
-
+#   check = np.load(input_file_name)
+#   print(len(check.files))
 
   fig = plt.figure()
   timer = fig.canvas.new_timer(interval = 5000) #creating a timer object and setting an interval of 5000 milliseconds
   timer.add_callback(close_event)
 
   if mode=='v':
+    # with open(input_file_name,'rb') as f1, open (output_file_name,'rb') as f2:
+    #   for i in range(10):
+    #     a = np.load(f1)
+    #     b = np.load(f2)
+    #     createMapGoalVisualization(a[0],a[1])
+        
+    #     for i in range(len(a[0])):
+    #       for j in range(len(a[0])):
+    #         if b[i,j] == -1:
+    #           b[i,j] = math.inf
+
+    #     plt.subplot(133)
+    #     plt.imshow(b,cmap='viridis')
+    #     timer.start()
+    #     plt.show()
+
     with open(input_file_name,'rb') as f1, open (output_file_name,'rb') as f2:
+      inx = np.load(f1)
+      outy = np.load(f2)
       for i in range(10):
-        a = np.load(f1)
-        b = np.load(f2)
+        a = inx['arr_' + str(i)]
+        b = outy['arr_' + str(i)]
+        # a = np.load(f1)
+        # b = np.load(f2)
         createMapGoalVisualization(a[0],a[1])
         
         for i in range(len(a[0])):
