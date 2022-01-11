@@ -7,18 +7,32 @@ import heapq
 import math
 import argparse
 from tqdm import tqdm 
+import time 
+import pickle
+import concurrent.futures
+
+t1 = time.perf_counter()
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--size",help = "size of the dataset",type=int)
 parser.add_argument("--P",help="ground truth resolution",type=int)
+parser.add_argument("--size",help = "size of the dataset",type=int)
 parser.add_argument("--M",help= "size of the map",type=int)
-parser.add_argument("--type",help="name the type of set you're generating")
+parser.add_argument("--xfile",help="name the of input x dataset you're generating")
+parser.add_argument("--yfile",help="name the of output y dataset you're generating")
+parser.add_argument("--vis",help="name of the .npz visualization file")
+parser.add_argument("--mode",help="enter c to create dataset and v to visualize the created dataset")
+parser.add_argument("--nthread",help="number of threads you want to use",type=int)
 args = parser.parse_args()
 
 P = args.P
-# M = 18
 M = args.M
-name = args.type
+mode = args.mode
+xfile = args.xfile
+yfile = args.yfile
+visfile = args.vis
+nthread = args.nthread
+size = args.size
+iter = range(size)
 
 def getDist(point1,point2):
   dist = math.sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2)
@@ -89,6 +103,18 @@ def isCollide(obstacles,angle1,angle2):
 
   return False
 
+def createMapGoalVisualization(m,g,o):
+  plt.figure(figsize=(9, 3))
+
+  plt.subplot(141)
+  plt.imshow(o,cmap='binary')
+
+  plt.subplot(142)
+  plt.imshow(m,cmap='binary')
+
+  plt.subplot(143)
+  plt.imshow(g,cmap='binary')
+
 def createMapGoal(obs):
   m = np.zeros((M,M))
   g = np.zeros((M,M))
@@ -105,22 +131,15 @@ def createMapGoal(obs):
       if m[row,col]==0:
         free_space.append((row,col))
 
-  ran = free_space[randint(0,len(free_space)-1)]
+  try:
+    ran = free_space[randint(0,len(free_space)-1)]
+  except ValueError:
+    return False,None,None,None
+
   g[ran] = 1
 
-  return m,g,ran
+  return True,m,g,ran
 
-def createMapGoalVisualization(m,g,o):
-  plt.figure(figsize=(9, 3))
-
-  plt.subplot(141)
-  plt.imshow(o,cmap='binary')
-
-  plt.subplot(142)
-  plt.imshow(m,cmap='binary')
-
-  plt.subplot(143)
-  plt.imshow(g,cmap='binary')
 
 class Node():
     def __init__(self, parent=None, position=None,g=None):
@@ -211,20 +230,25 @@ def createOutputVisualization(nodes):
   plt.subplot(144)
   plt.imshow(y,cmap='viridis')
 
-def createData():
+def createData(_):
   vi,obs1 = createOperationalSpace()
-  m,g,goalcoord = createMapGoal(obs1)
+  check = False
+  while not check:
+    check,m,g,goalcoord = createMapGoal(obs1)
   x = np.stack((m,g))
   n = Dijkstra(m,goalcoord)
   y = getOutput(n)
 
-  vis = (m,g,vi,n)
+  vis = np.asarray((m,g,vi,n),dtype=object)
 
   return x,y,vis
 
 def createVisualization(vis):
   createMapGoalVisualization(vis[0],vis[1],vis[2])
   createOutputVisualization(vis[3])
+
+def close_event():
+  plt.close()
 
 # vi,obs1 = createOperationalSpace()
 # m,g,goalcoord = createMapGoal(obs1)
@@ -240,11 +264,49 @@ def createVisualization(vis):
 
 # plt.show()
 
-input_file_name = "manipulationdata_input_" + str(args.P) + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
-output_file_name = "manipulationdata_output_" + str(args.P) + str(args.M) + "_" + str(args.size) + "_" + name +".npy"
+input_file_name = xfile +'.npz'
+output_file_name = yfile +'.npz'
+visualization_file_name = visfile +'.pickle'
 
-with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
-  for i in tqdm(range(args.size),desc="creating dataset..." ):
-    input,output,_ = createData()
-    np.save(f1,input)
-    np.save(f2,output)
+# with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
+#   for i in tqdm(range(args.size),desc="creating dataset..." ):
+#     input,output,_ = createData()
+#     np.save(f1,input)
+#     np.save(f2,output)
+
+def main():
+
+  if mode=='c':
+    with concurrent.futures.ProcessPoolExecutor(max_workers=nthread) as executor:
+      futures = list(tqdm(executor.map(createData,iter),total=len(iter)))
+      np.savez(input_file_name,*[i[0] for i in futures])
+      np.savez(output_file_name,*[i[1] for i in futures])
+      # np.savez(visualization_file_name,*[i[2] for i in futures])
+      f = open(visualization_file_name,'wb')
+      for i in futures:
+        pickle.dump(i[2],f)
+
+  fig = plt.figure()
+  timer = fig.canvas.new_timer(interval = 5000) #creating a timer object and setting an interval of 5000 milliseconds
+  timer.add_callback(close_event)
+
+  if mode=='v':
+    with open (visualization_file_name,'rb') as f3:
+      # visf = np.load(f3,allow_pickle=True)
+      for i in range(10):
+        # c =  visf['arr_' + str(i)]
+        # a = np.load(f1)
+        # b = np.load(f2)
+        c = pickle.load(f3)
+        createVisualization(c)
+        timer.start()
+        plt.show()
+
+  t2 = time.perf_counter()
+  print(f'Finished in {t2-t1} seconds')
+
+if __name__ == '__main__':
+  main()
+
+
+
