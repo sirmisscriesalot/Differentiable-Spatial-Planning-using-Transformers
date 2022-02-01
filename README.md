@@ -22,7 +22,7 @@ For more detailed information on what each optional argument does use -
 python Synthetic_Data_Navigation.py --help
 python Synthetic_Data_Manipulation.py --help 
 ```
-Visualize a dataset created using ```--mode v```. The visualization tool displays the first 10 data items from a choice of our created ```.npz``` x y file pair. An example is given below- 
+Visualize a dataset created using ```--mode v```. The visualization tool displays the first 10 data items from a choice of our created ```.npz``` x y file pair which consists of matrixes m,g and the ground truth. An example is given below- 
 ```py 
 python Synthetic_Data_Navigation.py --mode v --xfile trainx50 --yfile trainy50
 python Synthetic_Data_Manipulation.py --mode v --xfile trainx18 --yfile trainy18
