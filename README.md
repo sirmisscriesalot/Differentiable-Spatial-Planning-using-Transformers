@@ -24,6 +24,6 @@ python Synthetic_Data_Manipulation.py --help
 ```
 Visualize a dataset created using ```--mode v```. The visualization tool displays the first 10 data items from a choice of our created ```.npz``` x y file pair which consists of matrixes m,g and the ground truth for the navigation dataset. Visualizing the manipulation dataset uses a different pickle file separately. An example on how to use the tool is given below- 
 ```py 
-python Synthetic_Data_Navigation.py --mode v --xfile trainx50 --yfile trainy50
-python Synthetic_Data_Manipulation.py --mode v ---vis vistr36
+python Synthetic_Data_Navigation.py --mode v --xfile trainx50 --yfile trainy50 --M 50
+python Synthetic_Data_Manipulation.py --mode v ---vis vistr36 --M 18
 ```
