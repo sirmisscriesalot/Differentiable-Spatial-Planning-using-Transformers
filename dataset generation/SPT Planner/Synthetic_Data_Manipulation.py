@@ -1,4 +1,5 @@
 from random import randint,uniform,choice
+from typing import Type
 import numpy as np
 import matplotlib.pyplot as plt
 from shapely.geometry import Polygon,Point,LineString
@@ -32,7 +33,11 @@ yfile = args.yfile
 visfile = args.vis
 nthread = args.nthread
 size = args.size
-iter = range(size)
+try:
+    iter = range(size)
+except TypeError:
+    pass
+
 
 def getDist(point1,point2):
   dist = math.sqrt((point1[0]-point2[0])**2 + (point1[1]-point2[1])**2)
@@ -263,9 +268,11 @@ def close_event():
 # createVisualization(VIS)
 
 # plt.show()
-
-input_file_name = xfile +'.npz'
-output_file_name = yfile +'.npz'
+try:
+    input_file_name = xfile +'.npz'
+    output_file_name = yfile +'.npz'
+except TypeError:
+    pass
 visualization_file_name = visfile +'.pickle'
 
 # with open(input_file_name,'wb') as f1, open (output_file_name,'wb') as f2:
@@ -307,6 +314,5 @@ def main():
 
 if __name__ == '__main__':
   main()
-
 
 
