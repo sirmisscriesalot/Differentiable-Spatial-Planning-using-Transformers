@@ -28,4 +28,6 @@ python Synthetic_Data_Navigation.py --mode v --xfile trainx50 --yfile trainy50 -
 python Synthetic_Data_Manipulation.py --mode v ---vis vistr36 --M 18
 ```
 ![alt text](https://github.com/sirmisscriesalot/Differentiable-Spatial-Planning-using-Transformers/blob/main/dataset%20generation/SPT%20Planner/manipulation_test_data.png?raw=true )
+
+
 A sample Manipulation Data Item
