@@ -35,7 +35,7 @@ A sample Manipulation Data Item
 
 A sample Navigation Data Item
 
-Find the model we used to train here https://colab.research.google.com/drive/1n_e0a452BACcg5p2TeJwSRpFd0aKLUK6. You can also find it in ```utils/dspt_planner.py```. Manually specify the location of the custom datasets in the config dictionary if you wish to train the model locally or on custom datasets. 
+Find the model we used to train [here](https://colab.research.google.com/drive/1n_e0a452BACcg5p2TeJwSRpFd0aKLUK6) on google colab. You can also find it in ```utils/dspt_planner.py```. Manually specify the file location of the custom datasets and other parameters in the config dictionary if you wish to train the model locally or on custom datasets. 
 
 ![alt text](https://github.com/sirmisscriesalot/Differentiable-Spatial-Planning-using-Transformers/blob/main/utils/predicted_output.jpg)
 
