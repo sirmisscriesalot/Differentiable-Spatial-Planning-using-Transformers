@@ -27,12 +27,16 @@ Visualize a dataset created using ```--mode v```. The visualization tool display
 python Synthetic_Data_Navigation.py --mode v --xfile trainx50 --yfile trainy50 --M 50
 python Synthetic_Data_Manipulation.py --mode v ---vis vistr36 --M 18
 ```
-![alt text](https://github.com/sirmisscriesalot/Differentiable-Spatial-Planning-using-Transformers/blob/main/dataset%20generation/SPT%20Planner/manipulation_test_data.png?raw=true )
-
+![alt text](https://github.com/sirmisscriesalot/Differentiable-Spatial-Planning-using-Transformers/blob/main/dataset%20generation/SPT%20Planner/manipulation_test_data.png?raw=true ) 
 
 A sample Manipulation Data Item
 
 ![alt text](https://github.com/sirmisscriesalot/Differentiable-Spatial-Planning-using-Transformers/blob/main/dataset%20generation/SPT%20Planner/navigation_test_data.png?raw=true )
 
-
 A sample Navigation Data Item
+
+Find the model we used to train here https://colab.research.google.com/drive/1n_e0a452BACcg5p2TeJwSRpFd0aKLUK6. You can also find it in ```utils/dspt_planner.py```. Manually specify the location of the custom datasets in the config dictionary if you wish to train the model locally or on custom datasets. 
+
+![alt text](https://github.com/sirmisscriesalot/Differentiable-Spatial-Planning-using-Transformers/blob/main/utils/predicted_output.jpg)
+
+A sample predicted output vs ground truth map
