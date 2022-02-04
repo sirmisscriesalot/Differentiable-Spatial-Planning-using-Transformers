@@ -47,3 +47,4 @@ A sample predicted output vs ground truth map
 
 https://user-images.githubusercontent.com/19360845/152526089-8388faf2-0b08-4569-bdc6-1670d80d1b78.mp4
 
+Using Habitat Sim to generate dataset for the navigation mapper module
