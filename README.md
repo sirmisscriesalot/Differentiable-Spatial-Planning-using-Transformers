@@ -1,5 +1,5 @@
 # Differentiable-Spatial-Planning-using-Transformers
-PyTorch and PyTorch Lighting implementation of the Spatial Planning Transformers (SPT) from the 2021 ICML paper "Differentiable Spatial Planning using Transformers". 
+PyTorch and PyTorch Lightning implementation of the Spatial Planning Transformers (SPT) from the 2021 ICML paper "Differentiable Spatial Planning using Transformers". 
 
 To generate the synthetic datasets for navigation planner with 100000/5000/5000 train validation test split for 15X15, 30X30 and 50X50 map sizes- 
 ```
