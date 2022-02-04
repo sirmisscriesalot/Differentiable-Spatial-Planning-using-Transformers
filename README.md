@@ -37,7 +37,7 @@ A sample Manipulation Data Item
 
 A sample Navigation Data Item
 
-https://user-images.githubusercontent.com/19360845/152522732-e6c2e869-943b-4048-860e-fe462ac2b4d1.mp4
+https://github.com/sirmisscriesalot/Differentiable-Spatial-Planning-using-Transformers/blob/main/dataset%20generation/End%20to%20End%20Mapper/Habitat_Sim%20Dataset%20Gen/output.mp4
 
 Using Habitat Sim to create synthetic data for the end to end navigation mapper
 
