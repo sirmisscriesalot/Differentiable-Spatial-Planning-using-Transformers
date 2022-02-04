@@ -37,16 +37,14 @@ A sample Manipulation Data Item
 
 A sample Navigation Data Item
 
-
-
-https://user-images.githubusercontent.com/19360845/152523324-ca5382fe-cce5-44f0-afd6-eab3a7d9d497.mp4
-
-
-
-Using Habitat Sim to create synthetic data for the end to end navigation mapper
-
 Find the model we used to train [here](https://colab.research.google.com/drive/1n_e0a452BACcg5p2TeJwSRpFd0aKLUK6) on google colab. You can also find it in ```utils/dspt_planner.py```. Manually specify the file location of the custom datasets and other parameters in the config dictionary if you wish to train the model locally or on custom datasets. 
 
 ![alt text](https://github.com/sirmisscriesalot/Differentiable-Spatial-Planning-using-Transformers/blob/main/utils/predicted_output.jpg)
 
 A sample predicted output vs ground truth map
+
+
+https://user-images.githubusercontent.com/19360845/152525113-45e275f4-d8ae-4459-a9e4-1aacb1f0fcaa.mp4
+
+
+
